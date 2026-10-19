@@ -1,0 +1,21 @@
+# Compiler settings
+CC       = icx
+CFLAGS   = -Wall -qopenmp
+LIBS     = -lm
+
+# File paths
+TARGET   = omp/nbody
+SRC      = omp/nbody.c
+
+# Default rule
+all: $(TARGET)
+
+# Compile and link in one step
+$(TARGET): $(SRC)
+	$(CC) $(CFLAGS) -o $(TARGET) $(SRC) $(LIBS)
+
+# Clean up
+clean:
+	rm -f $(TARGET)
+
+.PHONY: all clean

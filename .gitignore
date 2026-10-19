@@ -1,0 +1,14 @@
+# Compiled executables from this project
+**/nbody
+
+# Regenerated benchmark input
+/galaxy_data.bin
+
+# Build / Python artifacts
+*.o
+__pycache__/
+*.pyc
+
+# OS/editor files
+.DS_Store
+*.swp

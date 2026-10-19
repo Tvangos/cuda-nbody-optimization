@@ -1,0 +1,16 @@
+# compile with: make -f Makefile_cuda DIR=VERSION, ex. DIR=GPU
+CC = nvcc
+
+CFLAGS = -O4 -use_fast_math -Xcompiler -O3 -Xcompiler -fopenmp  
+
+DIR := GPU
+SRC = $(DIR)/nbody.cu
+EXE = $(DIR)/nbody
+
+all: $(EXE)
+
+$(EXE): $(SRC)
+	$(CC) $(CFLAGS) $(SRC) -o $(EXE)
+
+clean:
+	rm -f $(EXE)
