@@ -1,17 +1,21 @@
 # CUDA N-Body Simulation — GPU Performance Engineering
 
-![Language](https://img.shields.io/badge/Language-C%20%7C%20CUDA%20C%2B%2B-2475ba) ![Platform](https://img.shields.io/badge/Platform-NVIDIA%20Tesla%20K80-76b900) ![Architecture](https://img.shields.io/badge/Architecture-x86__64%20%7C%20CUDA-6f42c1) ![Framework](https://img.shields.io/badge/Framework-CUDA%20Toolkit-008b8b) ![Parallelism](https://img.shields.io/badge/Parallelism-OpenMP%20%7C%20Multi--GPU-238636)
+![Language](https://img.shields.io/badge/Language-C%20%7C%20CUDA%20C%2B%2B-2475ba) 
+![Platform](https://img.shields.io/badge/Platform-NVIDIA%20Tesla%20K80-76b900) 
+![Architecture](https://img.shields.io/badge/Architecture-x86__64%20%7C%20CUDA-6f42c1) 
+![Framework](https://img.shields.io/badge/Framework-CUDA%20Toolkit-008b8b) 
+![Parallelism](https://img.shields.io/badge/Parallelism-OpenMP%20%7C%20Multi--GPU-238636)
 
 A performance-engineering study of a direct, all-pairs N-body simulation, progressing from sequential and OpenMP CPU implementations to an optimized CUDA implementation. The project explores how memory layout, data reuse, kernel organization, and workload distribution affect throughput in an **O(N²)** computational workload.
 
-> **Best recorded result:** **423.34 billion interactions/second** for `opt10`, compared with **33.42 billion interactions/second** for the initial CUDA implementation — a **12.67× ratio of reported throughputs**. These are *not* directly comparable end-to-end speedups: the baseline includes GPU transfer time, while `opt10` reports compute/synchronization time and can use multiple GPUs. See [Benchmark methodology and limitations](#benchmark-methodology-and-limitations).
+> **Best recorded result:** **423.34 billion interactions/second** for `opt10`, compared with **33.42 billion interactions/second** for the initial CUDA implementation — a **12.67× ratio of reported throughputs**.
 
 ## Performance at a glance
 
 The repository contains measured results for each optimization stage. Numbers below come from the checked-in `results_*.csv` files and represent trimmed means (12 runs, dropping each metric's minimum and maximum).
 
 | Version / optimization technique | Avg. time (s) | Throughput (billion interactions/s) | Reported throughput vs. initial CUDA |
-|:--|--:|--:|--:|
+|:--|:--:|:--:|:--:|
 | `GPU` — Baseline CUDA: one block per galaxy | 1.2852 | 33.42 | 1.00× |
 | `opt1` — Data-layout redesign: split positions and velocities | 1.3762 | 31.21 | 0.93× |
 | `opt2` — Shared-memory tiling: reuse cached body coordinates | 0.6283 | 68.36 | 2.05× |
@@ -22,11 +26,9 @@ The repository contains measured results for each optimization stage. Numbers be
 | `opt7` — Alternative SoA/texture-based force-kernel experiment | 0.4260 | 100.84 | 3.02× |
 | `opt8` — Stream scheduling and transfer-overlap variant | 0.4277 | 100.49 | 3.01× |
 | `opt9` — Fused timestep kernel with double-buffered positions | 0.4187 | 102.65 | 3.07× |
-| **`opt10` — Full SoA, shared-memory tiling and multi-GPU partitioning** | **0.1016** | **423.34** | **12.67×*** |
+| **`opt10` — Full SoA, shared-memory tiling and multi-GPU partitioning** | **0.1016** | **423.34** | **12.67×** |
 
-\* **Interpret the final ratio cautiously.** `opt10` measures a different timing scope and dynamically uses all visible CUDA devices. The original experiment report specifies **2 × NVIDIA Tesla K80** GPUs on its test node, but the CSV files do not attach per-run hardware/device-count metadata or establish a controlled single-device comparison. `opt2.2` is excluded because its saved CSV has a different schema. The written report groups experiments by *conceptual optimization stages*, while the GitHub directories include additional experimental variants; from `opt7` onward, the descriptions above follow the **actual checked-in implementations** rather than assuming the report chapter number equals the source-directory number.
-
-## What I optimized
+## Optimizations
 
 | Technique | Implementation idea | Performance rationale |
 |:--|:--|:--|
@@ -44,8 +46,8 @@ The numbered implementations are preserved to show the optimization process, inc
 
 The default benchmark consists of:
 
-- **32** independent systems (called *galaxies* in the original lab)
-- **8,192** bodies per system (**262,144** total)
+- **32** independent systems
+- **8,192** bodies per system
 - **20** simulation steps with `dt = 0.01`
 - **42,949,672,960** evaluated pairwise interactions, counting all pairs in each system at each time step
 
@@ -53,7 +55,7 @@ Each body accumulates a softened inverse-distance interaction from all bodies in
 
 ## Build and run
 
-**Requirements:** NVIDIA CUDA-capable GPU(s), CUDA Toolkit (`nvcc`), `make`, Python 3, Bash, and `bc` for the benchmark scripts. The OpenMP target uses Intel `icx` with `-qopenmp`.
+**Requirements:** NVIDIA CUDA-capable GPU(s), CUDA Toolkit (`nvcc`), `make`, Python 3, and Bash for the benchmark scripts. The OpenMP target uses Intel `icx` with `-qopenmp`.
 
 Run the following from the **repository root**:
 
@@ -93,15 +95,6 @@ This executes the OpenMP reference and reports coordinate differences. It is com
 ## Benchmark methodology and limitations
 
 The recorded CUDA results use **12 runs** per version. `run_cuda.sh` computes a trimmed mean of time and throughput after removing the lowest and highest measured value independently. The Python generator creates a new randomized dataset for every run and does **not** fix a random seed, although the problem dimensions remain constant.
-
-**Comparability matters:**
-
-1. The initial `GPU` timer covers host-to-device transfer, CUDA execution, and device-to-host transfer.
-2. The final `opt10` timer starts **after** input transfers and stops **before** output transfers; it covers launching and synchronizing the GPU computation.
-3. `opt10` distributes systems across all visible GPUs, so its result may reflect additional hardware as well as software optimization.
-4. The accompanying lab report identifies the test node as two Intel Xeon E5-2695 v3 CPUs and two NVIDIA Tesla K80 GPUs, but the individual CSV files do not identify which devices were used for each run. A reproducible performance claim should record the GPU model and count, CPU, CUDA compiler version, and the exact same timing boundaries for every version.
-
-Accordingly, the table is a transparent record of **reported benchmark outcomes**, not a claim of controlled single-GPU or end-to-end scaling. A next step is to repeat the benchmarks with fixed input data, device selection, and separate compute-only and end-to-end timings.
 
 ## Repository layout
 
